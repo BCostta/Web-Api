@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using Api_.Data;
+using System.Web;
 
 namespace Api_.Controllers
 {
@@ -17,25 +18,43 @@ namespace Api_.Controllers
             return PagamentoDao.ListarFaturas() ;
         }
 
-        // GET api/<controller>/5
-        public string Get(int id)
+        public HttpResponseMessage PostFatura(Fatura fatura)
         {
-            return "value";
+            string mensagem = "";
+            StatusPagamento status = PagamentoDao.IncluirFatura(fatura);
+            if(status != StatusPagamento.PEDIDO_OK)
+            {
+                
+                switch (status)
+                {
+                    case StatusPagamento.CARTAO_INEXISTENTE:
+                        mensagem = "O cartão não existe";
+                        break;
+
+                    case StatusPagamento.PEDIDO_JA_PAGO:
+                        mensagem = "Esse pedido já está pago!";
+                        break;
+
+                    case StatusPagamento.SALDO_INDISPONIVEL:
+                        mensagem = "Sem saldo!";
+                        break;
+                }
+
+                var erro = new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent("Erro no Servidor!!"),
+                    ReasonPhrase = mensagem
+            };
+
+                throw new HttpResponseException(erro);
+            }
+            else
+            {
+                var resposta = Request.CreateResponse<Fatura>(HttpStatusCode.Created, fatura);
+                string uri = Url.Link("DefaultApi", new { id = fatura.Id });
+                return resposta;
+            }
         }
 
-        // POST api/<controller>
-        public void Post([FromBody] string value)
-        {
-        }
-
-        // PUT api/<controller>/5
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<controller>/5
-        public void Delete(int id)
-        {
-        }
     }
 }
